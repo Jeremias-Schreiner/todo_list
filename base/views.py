@@ -1,4 +1,6 @@
 import imp
+from multiprocessing import context
+from sqlite3 import complete_statement
 from django.shortcuts import render
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
@@ -22,6 +24,12 @@ class TaskListView(LoginRequiredMixin, ListView):
     context_object_name = 'tasks'
     template_name = 'base/task-list.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['task'] = context['tasks'].filter(user=self.request.user)
+        context['count'] = context['tasks'].filter(complete=False).count()
+        return context
+
 class TaskDetailView(LoginRequiredMixin, DetailView):
     model = Task
     context_object_name = 'task'
@@ -31,11 +39,14 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
     success_url = reverse_lazy('task-list')
     template_name = 'base/task-form.html'
-    fields = '__all__'
+    fields = ['title', 'description','complete']
+    def form_valid(self, form):
+        form.instance.user = self.request.user  
+        return super(TaskCreateView, self).form_valid(form)
 
 class TaskUpdateView(LoginRequiredMixin, UpdateView):
     model = Task
-    fields = '__all__'
+    fields = ['title', 'description','complete']
     success_url = reverse_lazy('task-list')
     template_name = 'base/task-form.html'
 
