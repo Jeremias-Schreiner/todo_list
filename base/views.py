@@ -1,14 +1,13 @@
-import imp
-from multiprocessing import context
-from sqlite3 import complete_statement
-from django.shortcuts import render
+from .models import Task
+from django.shortcuts import redirect, render
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView, FormView
 from django.urls import reverse_lazy
-from base.models import Task
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
 # Create your views here.
 
 class CustomLoginView(LoginView):
@@ -19,15 +18,43 @@ class CustomLoginView(LoginView):
     def get_success_url(self) -> str:
         return reverse_lazy('task-list')  
 
+class RegisterFormView(FormView):
+    template_name = 'base/register.html'
+    form_class = UserCreationForm
+    success_url = reverse_lazy('task-list')
+
+    def form_valid(self, form):
+        user = form.save()
+        if user is not None:
+                login(self.request, user)
+        return super(RegisterFormView, self).form_valid(form)
+    
+    def get(self, *args, **kwargs):
+        if self.request.user.is_authenticated:
+            return redirect('task-list')
+        return super().get(self, *args, **kwargs)
+
 class TaskListView(LoginRequiredMixin, ListView):
-    model = Task
+    #model = Task esto no es necesario si defino queryset
     context_object_name = 'tasks'
     template_name = 'base/task-list.html'
+    queryset = Task.objects.all().order_by('title')
 
     def get_context_data(self, **kwargs):
+        #Filter current user taks
         context = super().get_context_data(**kwargs)
         context['task'] = context['tasks'].filter(user=self.request.user)
         context['count'] = context['tasks'].filter(complete=False).count()
+
+        search_input = self.request.GET.get('search-area','')
+
+        if search_input:
+            context['tasks'] = context['tasks'].filter(
+                title__icontains = search_input
+            )
+        
+        context['search_input'] = search_input
+
         return context
 
 class TaskDetailView(LoginRequiredMixin, DetailView):

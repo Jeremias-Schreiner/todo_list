@@ -1,3 +1,4 @@
+from sre_parse import State
 from django.db import models
 from django.contrib.auth.models import User
 # Create your models here.
@@ -18,7 +19,12 @@ class Task(models.Model):
     created = models.DateField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return self.title
+        if self.complete:
+            state = 'complete'
+        else:
+            state = 'uncomplete'
+        task_string = f"Task title: {self.title}"
+        return task_string
 
     class Meta():
         ordering = ['complete']
