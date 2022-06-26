@@ -35,15 +35,15 @@ class RegisterFormView(FormView):
         return super().get(self, *args, **kwargs)
 
 class TaskListView(LoginRequiredMixin, ListView):
-    #model = Task esto no es necesario si defino queryset
+    model = Task
     context_object_name = 'tasks'
     template_name = 'base/task-list.html'
-    queryset = Task.objects.all().order_by('title')
+    #queryset = Task.objects.all().order_by('title')
 
     def get_context_data(self, **kwargs):
         #Filter current user taks
         context = super().get_context_data(**kwargs)
-        context['task'] = context['tasks'].filter(user=self.request.user)
+        context['tasks'] = context['tasks'].filter(user=self.request.user)
         context['count'] = context['tasks'].filter(complete=False).count()
 
         search_input = self.request.GET.get('search-area','')
